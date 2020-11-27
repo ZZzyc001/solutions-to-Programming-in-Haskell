@@ -126,3 +126,113 @@ fail             :: Stack -> Stack
 fail []          = []
 fail (VAL _ : s) = fail s
 fail (HAN c : s) = exec c s
+
+
+-- solution2
+import Prelude hiding (Maybe, Just, Nothing, fail)
+data Expr = Val Int | Add Expr Expr | Throw | Catch Expr Expr
+
+data Maybe a = Just a | Nothing
+
+eval             :: Expr -> Maybe Int
+eval (Val n)     = Just n
+eval (Add x y)   = case eval x of
+                    Just n  -> case eval y of
+                                Just m  -> Just (n + m)
+                                Nothing -> Nothing
+                    Nothing -> Nothing
+eval Throw       = Nothing
+eval (Catch x h) = case eval x of
+                    Just n  -> Just n
+                    Nothing -> eval h
+
+-- comp' :: Expr -> Code -> Code -> Code
+
+-- type Stack = [Elem]
+
+-- data Elem = VAL Int
+
+-- exec (comp' x sc fc) s = case eval x of
+--                              Just n  -> exec sc (VAL n : s)
+--                              Nothing -> exec fc s
+
+--   exec (comp' (Val n) sc fc) s
+-- =    { specification exec }
+--   exec sc (VAL n : s)
+-- =    { define: exec (PUSH n c) s = exec c (VAL n : s) }
+--   exec (PUSH n sc) s
+
+--   exec (comp' Throw sc fc) s
+-- =    { specification exec }
+--   exec fc s
+
+--   exec (comp' (Catch x h) sc fc) s
+-- =    { secification exec }
+--   case eval x of
+--      Just n  -> exec sc (VAL n : s)
+--      Nothing -> case h of
+--                  Just m  -> exec sc (VAL m : s)
+--                  Nothing -> exec fc s
+-- =    { induction hypothesis for h }
+--   case eval x of
+--      Just n  -> exec sc (VAL n : s)
+--      Nothing -> exec (comp' h sc fc) s
+-- =    {induction hypothesis for x }
+--   exec (comp' x sc (comp' h sc fc)) s
+
+--   exec (comp' (Add x y) sc fc) s
+-- =    { specification exec }
+--   case eval x of
+--      Just n  -> case eval y of
+--                  Just m  -> exec (ADD sc) (VAL m : VAL n : s)
+--                  Nothing -> exec fc s
+--      Nothing -> exec fc s
+-- =    { define: exec (POP c) (VAL _ : s) = exec c s }
+--   case eval x of
+--      Just n  -> case eval y of
+--                  Just m  -> exec (ADD sc) (VAL m : VAL n : s)
+--                  Nothing -> exec (POP fc) (VAL n : s)
+--      Nothing -> exec fc s
+-- =    { induction hypothesis for y }
+--   case eval x of
+--      Just n  -> exec (comp' y (ADD sc) (POP fc) (VAL n : s))
+--      Nothing -> exec fc s
+-- =    { induction hypothesis for x}
+--   exec (comp' x (comp' y (ADD sc) (POP fc)) fc) s
+
+-- exec (comp x) s = case eval x of
+--                      Just n  -> VAL n : s
+--                      Nothing -> s
+
+--   exec (comp x) s
+-- =    { specification exec }
+--   case eval x of
+--      Just n  -> VAL n : s
+--      Nothing -> s
+-- =    { define: exec HALT s = s }
+--   case eval x of
+--      Just n  -> exec HALT (VAL n : s)
+--      Nothing -> exec HALT s
+-- =    { specification exec }
+--   exec (comp' x HALT HALT) s
+
+data Code = HALT | PUSH Int Code | ADD Code | POP Code
+
+type Stack = [Elem]
+
+data Elem = VAL Int
+
+comp   :: Expr -> Code
+comp x = comp' x HALT HALT
+
+comp'                   :: Expr -> Code -> Code -> Code
+comp' (Val   n)   sc _  = PUSH n sc
+comp' (Add   x y) sc fc = comp' x (comp' y (ADD sc) (POP fc)) fc
+comp' Throw       _  fc = fc
+comp' (Catch x h) sc fc = comp' x sc (comp' h sc fc)
+
+exec                                :: Code -> Stack -> Stack
+exec HALT       s                   = s
+exec (PUSH n c) s                   = exec c (VAL n : s)
+exec (ADD c)    (VAL m : VAL n : s) = exec c (VAL (n + m) : s)
+exec (POP c)    (VAL _ : s)         = exec c s
