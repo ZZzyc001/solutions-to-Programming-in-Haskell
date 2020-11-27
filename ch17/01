@@ -15,6 +15,10 @@ eval Throw       = Nothing
 eval (Catch x h) = case eval x of
                     Just n  -> Just n
                     Nothing -> eval h
+                    
+-- exec (comp' x c) s = case eval x of
+--                          Just n  -> exec c (VAL n : s)
+--                          Nothing -> fail s
 
 --   exec (comp' (Val n) c) s
 -- =    { specification exec }
@@ -77,6 +81,10 @@ eval (Catch x h) = case eval x of
 --   exec (comp' x (UNMARK c)) (HAN (comp' h c) : s)
 -- =    { define: exec (MARK c' c) s = exec c (HAN c' : s) }
 --   exec (MARK (comp' h c) (comp' x (UNMARK c))) s
+
+-- exec (comp x) s = case eval x of
+--                      Just n  -> VAL n : s
+--                      Nothing -> fail s
 
 --   exec (comp x) s
 -- =    { specification exec }
