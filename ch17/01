@@ -236,3 +236,170 @@ exec HALT       s                   = s
 exec (PUSH n c) s                   = exec c (VAL n : s)
 exec (ADD c)    (VAL m : VAL n : s) = exec c (VAL (n + m) : s)
 exec (POP c)    (VAL _ : s)         = exec c s
+
+-- solution3
+import Prelude hiding (Maybe, Just, Nothing, fail)
+
+type State = Int
+
+data Expr = Val Int | Add Expr Expr | Throw | Catch Expr Expr | Get | Put Expr Expr
+
+data Maybe a = Just a | Nothing
+
+eval               :: Expr -> State -> (Maybe Int, State)
+eval (Val   n)   q = (Just n, q)
+eval (Add   x y) q = case eval x q of
+                        (Just n,  q') -> case eval y q' of
+                                        (Just m,  q'') -> (Just (n + m), q'')
+                                        (Nothing, q'') -> (Nothing,      q'')
+                        (Nothing, q') -> (Nothing, q')
+eval Throw       q = (Nothing, q)
+eval (Catch x h) q = case eval x q of
+                        (Just n,  q') -> (Just n, q')
+                        (Nothing, q') -> eval h q'
+eval Get         q = (Just q, q)
+eval (Put   x y) q = case eval x q of
+                        (Just n,  _)  -> eval y n
+                        (Nothing, q') -> (Nothing, q')
+
+type Conf = (Stack, State)
+
+type Stack = [Elem]
+
+-- exec (comp' x c) (s, q) = case eval x q of
+--                              (Just n,  q') -> exec c (VAL n : s, q')
+--                              (Nothing, q') -> fail (s, q')
+
+--   exec (comp' (VAL n) c) (s, q)
+-- =    { specification exec }
+--   exec c (VAL n : s, q)
+-- =    { define: exec (PUSH n c) (s, q) = exec c (VAL n : s, q) }
+--   exec (PUSH n c) (s, q)
+
+--   exec (comp' Throw c) (s, q)
+-- =    { specification exec }
+--   fail (s, q)
+-- =    { define: exec FAIL (s, q) = fail (s, q) }
+--   exec FAIL (s, q)
+
+--   exec (comp' (Add x y) c) (s, q)
+-- =    { specification exec }
+--   case eval x q of
+--      (Just n,  q') -> case eval y q' of
+--                          (Just m,  q'') -> exec c (VAL (n + m) : s, q'')
+--                          (Nothing, q'') -> fail (s, q'')
+--      (Nothing, q') -> fail (s, q')
+-- =    { define: exec (ADD c) (VAL m : VAL n : s, q) = exec c (VAL (n + m) : s, q) }
+--   case eval x q of
+--      (Just n,  q') -> case eval y q' of
+--                          (Just m,  q'') -> exec (ADD c) (VAL m : VAL n : s, q'')
+--                          (Nothing, q'') -> fail (s, q'')
+--      (Nothing, q') -> fail (s, q')
+-- =    { define: fail (VAL n : s, q) = fail (s, q) }
+--   case eval x q of
+--      (Just n,  q') -> case eval y q' of
+--                          (Just m,  q'') -> exec (ADD c) (VAL m : VAL n : s, q'')
+--                          (Nothing, q'') -> fail (VAL n : s, q'')
+--      (Nothing, q') -> fail (s, q')
+-- =    { induction hypothesis for y }
+--   case eval x q of
+--      (Just n,  q') -> exec (comp' y (ADD c)) (VAL n : s, q')
+--      (Nothing, q') -> fail (s, q')
+-- =    { induction hypothesis for x }
+--   exec (comp' x (comp' y (ADD c))) (s, q)
+
+--   exec (comp' (Catch x h) c) (s, q)
+-- =    { specification exec }
+--   case eval x q of
+--      (Just n,  q') -> exec c (VAL n : s, q')
+--      (Nothing, q') -> case eval h q' of
+--                          (Just m,  q'') -> exec c (VAL m : s, q'')
+--                          (Nothing, q'') -> fail (s, q'')
+-- =    { induction hypothesis for h }
+--   case eval x q of
+--      (Just n,  q') -> exec c (VAL n : s, q')
+--      (Nothing, q') -> exec (comp' h c) (s, q')
+-- =    { define: fail (HAN h : s, q) = exec h (s, q) }
+--   case eval x q of
+--      (Just n,  q') -> exec c (VAL n : s, q')
+--      (Nothing, q') -> fail (HAN (comp' h c) : s, q)
+-- =    { define: exec (UNMARK c) (VAL n : HAN _ : s, q) = exec c (VAL n : s, q) }
+--   case eval x q of
+--      (Just n,  q') -> exec (UNMARK c) (VAL n : HAN (comp' h c) : s, q')
+--      (Nothing, q') -> fail (HAN (comp' h c) : s, q')
+-- =    { induction hypothesis for x }
+--   exec (comp' x (UNMARK c)) (HAN (comp' h c) : s, q)
+-- =    { define : exec (MARK c' c) (s, q) = exec c (HAN c' : s, q) }
+--   exec (MARK (comp' h c) (comp' x (UNMARK c))) (s, q)
+
+--   exec (comp' Get c) (s, q)
+-- =    { specification exec }
+--   exec c (VAL q : s, q)
+-- =    { define: exec (LOAD c) (s, q) = exec c (VAL q : s, q) }
+--   exec (LOAD c) (s, q)
+
+--   exec (comp' (Put x y) c) (s, q)
+-- =    { specification exec }
+--   case eval x q of
+--      (Just n, q')  -> case eval y n of
+--                          (Just m,  q'') -> exec c (VAL m : s, q'')
+--                          (Nothing, q'') -> fail (s, q'')
+--      (Nothing, q') -> fail (s, q')
+-- =    { induction hypothesis for y }
+--   case eval x q of
+--      (Just n,  q') -> exec (comp' y c) (s, n)
+--      (Nothing, q') -> fail (s, q')
+-- =    { define: exec (SAVE c') (VAL n : s,, q') = exec c' (s, n) }
+--   case eval x q of
+--      (Just n,  q') -> exec (SAVE (comp' y c)) (VAL n : s, q')
+--      (Nothing, q') -> fail (s, q')
+-- =    {induction hypothesis for x }
+--   exec (comp' x (SAVE (comp' y c))) (s, q)
+
+-- exec (comp e) (s, q) = case eval e q of
+--                          (Just n,  q') -> (VAL n : s, q')
+--                          (Nothing, q') -> fail (s, q')
+
+--   exec (comp e) (s, q)
+-- =    { specification exec }
+--   case eval e q of
+--      (Just n,  q') -> (VAL n : s, q')
+--      (Nothing, q') -> fail (s, q')
+-- =    { define: exec HALT (s, q) = (s, q) }
+--   case eval e q of
+--      (Just n,  q') -> exec HALT (VAL n : s, q')
+--      (Nothing, q') -> fail (s, q')
+-- =    { specification exec }
+--   exec (comp' e HALT) s
+
+data Code = HALT | PUSH Int Code  | ADD Code | 
+            FAIL | MARK Code Code | UNMARK Code |
+            LOAD Code | SAVE Code
+
+comp   :: Expr -> Code
+comp x = comp' x HALT
+
+comp'               :: Expr -> Code -> Code
+comp' (Val   n)   c = PUSH n c
+comp' (Add   x y) c = comp' x (comp' y (ADD c))
+comp' Throw       _ = FAIL 
+comp' (Catch x h) c = MARK (comp' h c) (comp' x (UNMARK c))
+comp' Get         c = LOAD c
+comp' (Put   x y) c = comp' x (SAVE (comp' y c))
+
+data Elem = VAL Int | HAN Code
+
+exec :: Code -> Conf -> Conf
+exec HALT       (s, q)                 = (s, q)
+exec (PUSH n c) (s, q)                 = exec c (VAL n : s, q)
+exec (ADD c)    (VAL m : VAL n : s, q) = exec c (VAL (n + m) : s, q)
+exec FAIL       (s, q)                 = fail (s, q)
+exec (MARK h c) (s, q)                 = exec c (HAN h : s, q)
+exec (UNMARK c) (VAL n : HAN _ : s, q) = exec c(VAL n : s, q)
+exec (LOAD   c) (s, q)                 = exec c (VAL q : s, q)
+exec (SAVE   c) (VAL n : s, _)         = exec c (s, n)
+
+fail :: Conf -> Conf
+fail ([], q)        = ([], q)
+fail (VAL _ : s, q) = fail (s, q)
+fail (HAN h : s, q) = exec h (s, q)
