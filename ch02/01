@@ -1,0 +1,30 @@
+-- 2
+-- (2^3) * 4
+-- (2 * 3) + (4 * 5)
+-- 2 + (3 * (4 ^ 5))
+
+-- 3
+n :: Int
+n = a `div` length xs
+        where
+            a  = 10
+            xs = [1, 2, 3, 4, 5]
+
+-- 4
+last1 :: [c] -> c
+last1 = head . reverse
+
+last2 :: [a] -> a
+last2 xs = xs !! (length xs - 1)
+
+last3 :: [a] -> a
+last3 [x]      = x
+last3 (_ : xs) = last xs
+
+-- 5
+init1 :: [a] -> [a]
+init1 = reverse . tail . reverse
+
+init2 :: [a] -> [a]
+init2 [_]      = []
+init2 (x : xs) = x : init2 xs
