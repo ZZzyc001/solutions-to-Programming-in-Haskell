@@ -1,0 +1,72 @@
+-- 1
+halve :: [a] -> ([a], [a])
+halve xs = (take n xs, drop n xs)
+            where n = length xs
+
+-- 2
+-- a
+thirda :: [a] -> a
+thirda = head . tail . tail
+-- b
+thirdb :: [a] -> a
+thirdb xs = xs !! 2
+-- c
+thirdc :: [a] -> a
+thirdc (_ : _ : x : _) = x
+
+-- 3
+-- a
+safetaila :: [a] -> [a]
+safetaila xs = if null xs then xs else tail xs
+-- b
+safetailb :: [a] -> [a]
+safetailb xs | null xs   = xs
+             | otherwise = tail xs
+-- c
+safetailc :: [a] -> [a]
+safetailc [] = []
+safetailc xs = tail xs
+
+-- 4
+f1 :: Bool -> Bool -> Bool
+f1 True  True  = True
+f1 True  False = True
+f1 False True  = True
+f1 False False = False
+
+f2 :: Bool -> Bool -> Bool
+f2 False False = False
+f2 _     _     = True
+
+f3 :: Bool -> Bool -> Bool
+f3 False b  = b
+f3 True  _  = True
+
+f4 :: Bool -> Bool -> Bool
+f4 b c | b == c    = b
+       | otherwise = True
+
+-- 5
+f5 :: Bool -> Bool -> Bool
+f5 b c = if b then
+            if c then
+                True
+            else
+                False
+        else
+            False
+
+-- 6
+f6 :: Bool -> Bool -> Bool
+f6 b c = if b then c else False
+
+-- 7
+mult :: Int -> Int -> Int -> Int
+mult = \x y z -> x * y * z
+
+-- 8
+luhnDouble :: Int -> Int
+luhnDouble x = (x * 2) `mod` 9
+
+luhn :: Int -> Int -> Int -> Int -> Bool
+luhn a b c d = (luhnDouble a + b + luhnDouble c + d) `mod` 10 == 0
