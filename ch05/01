@@ -1,0 +1,92 @@
+import Prelude hiding (replicate)
+import Data.Char ( ord, isAlpha, isLower, isUpper, chr )
+-- 1
+answer1 :: Integer
+answer1 = sum [x * x | x <- [1..100]]
+
+-- 2
+grid :: Int -> Int -> [(Int, Int)]
+grid m n = [(x, y) | x <- [0..m], y <- [0..n]]
+
+-- 3
+square :: Int -> [(Int, Int)]
+square n = [(x, y) | (x, y) <- grid n n, x /= y]
+
+-- 4
+replicate :: Int -> a -> [a]
+replicate n x = [x | _ <- [1..n]]
+
+-- 5
+pyths :: Int -> [(Int, Int, Int)]
+pyths n = [(x, y, z) | x <- [1..n], y <- [1..n], z <- [x..n], x * x + y * y == z * z]
+
+-- 6
+perfects :: Int -> [Int]
+perfects n = [x | x <- [2..n], sum (factors x) == x]
+                where
+                    factors n = [s | s <- [1..(n - 1)], n `mod` s == 0]
+
+-- 7
+nns :: [(Integer, Integer)]
+nns = concat [[(x, y) | y <- [3, 4]] | x <- [1, 2]]
+
+-- 8
+positions :: Eq a => a -> [a] -> [Int]
+positions x xs = find x $ zip xs [1..]
+
+find :: Eq a => a -> [(a, b)] -> [b]
+find a xs = [b | (a', b) <- xs , a == a']
+
+-- 9
+scalarproduct :: [Int] -> [Int] -> Int
+scalarproduct xs ys = sum [x * y | (x, y) <- zip xs ys]
+
+-- 0
+llet2int :: Char -> Int
+llet2int c = ord c - ord 'a'
+
+ulet2int :: Char -> Int
+ulet2int c = ord c - ord 'A'
+
+lint2let :: Int -> Char
+lint2let n = chr (ord 'a' + n)
+
+uint2let :: Int -> Char
+uint2let n = chr (ord 'A' + n)
+
+shift :: Int -> Char -> Char
+shift n c | isLower c = lint2let ((llet2int c + n) `mod` 26)
+          | isUpper c = uint2let ((ulet2int c + n) `mod` 26)
+          | otherwise = c
+
+encode :: Int -> String -> String
+encode n xs = [shift n x | x <- xs]
+
+table :: [Float]
+table = [8.1, 1.5, 2.8, 4.2, 12.7, 2.2, 2.0, 6.1, 7.0,
+        0.2, 0.8, 4.0, 2.4, 6.7, 7.5, 1.9, 0.1, 6.0,
+        6.3, 9.0, 2.8, 1.0, 2.4, 0.2, 2.0, 0.1]
+
+percent :: Int -> Int -> Float
+percent n m = (fromIntegral n / fromIntegral m) * 100
+
+freqs :: String -> [Float]
+freqs xs = [percent (count x xs) n | x <- [0 .. 25]]
+            where
+                count x xs = length [1 | y <- xs, x + ord 'a' == ord y || x + ord 'A' == ord y]
+                n = alphas xs
+                alphas xs = length [1 | y <- xs , isAlpha y]
+
+chisqr :: [Float] -> [Float] -> Float
+chisqr os es = sum [((o - e) ^ 2) / e | (o, e) <- zip os es]
+
+rotate :: Int -> [a] -> [a]
+rotate n xs = drop n xs ++ take n xs
+
+crack :: String -> String
+crack xs = encode (-factor) xs
+            where
+                factor = head (positions (minimum chitab) chitab)
+                chitab = [chisqr (rotate n table') table | n <- [0..25]]
+                table' = freqs xs
+
